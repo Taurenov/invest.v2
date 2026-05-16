@@ -1,1 +1,10 @@
 *.mk linguist-detectable=false
+
+# Игнорировать Makefile во всех папках проекта
+**/[Mm]akefile* linguist-detectable=false
+**/Makefile* linguist-detectable=false
+*.mk linguist-detectable=false
+
+# Если у вас Autotools (C/C++ проекты)
+*.in linguist-vendored
+*.am linguist-vendored
