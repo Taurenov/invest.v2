@@ -1,0 +1,114 @@
+{
+  "app_name": "Fin Helper",
+  "nav": {
+    "home": "Home",
+    "transactions": "Transactions",
+    "analytics": "Analytics",
+    "markets": "Markets",
+    "goals": "Goals",
+    "calculator": "Calculator",
+    "portfolio": "Portfolio",
+    "settings": "Settings",
+    "forecast": "AI Forecast"
+  },
+  "common": { "loading": "Loading…" },
+  "portfolio": {
+    "title": "Portfolio",
+    "value": "Market value",
+    "cost": "Cost basis",
+    "add": "Add holding",
+    "add_btn": "Add",
+    "ticker": "Ticker",
+    "qty": "Qty",
+    "price": "Price"
+  },
+  "markets": {
+    "title": "Markets",
+    "live": "Live quotes",
+    "add_ticker": "Ticker (MOEX)",
+    "add": "Add to list",
+    "price": "Price",
+    "summary": "Overview"
+  },
+  "analytics": {
+    "from": "From",
+    "to": "To",
+    "export": "Export CSV",
+    "by_month": "By month",
+    "by_category": "Expenses by category"
+  },
+  "settings": {
+    "title": "Settings",
+    "theme": "Theme",
+    "theme_dark": "Dark",
+    "theme_light": "Light",
+    "theme_system": "System",
+    "locale": "Language",
+    "currency": "Currency",
+    "timezone": "Timezone"
+  },
+  "auth": {
+    "login": "Sign in",
+    "register": "Sign up",
+    "logout": "Sign out",
+    "password": "Password",
+    "name": "Name",
+    "to_register": "Create account",
+    "to_login": "Already have an account",
+    "error": "Login or registration failed"
+  },
+  "tx": {
+    "add": "Add transaction",
+    "kind": "Type",
+    "income": "Income",
+    "expense": "Expense",
+    "amount": "Amount",
+    "category": "Category",
+    "description": "Description",
+    "date": "Date",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "goals": {
+    "title": "Financial goals",
+    "create": "New goal",
+    "name": "Title",
+    "target": "Target amount",
+    "create_btn": "Create",
+    "contribute": "Contribute",
+    "pick": "Goal",
+    "amount": "Amount",
+    "contribute_btn": "Add"
+  },
+  "calc": {
+    "title": "Financial calculator",
+    "savings": "Savings",
+    "initial": "Initial amount",
+    "current": "Current amount",
+    "final": "Final amount",
+    "years": "Years",
+    "monthly": "Monthly contribution",
+    "rate": "Annual rate %",
+    "months": "Months",
+    "initial_balance": "Starting balance",
+    "run": "Calculate",
+    "result": "Result",
+    "per_year": "per year"
+  },
+  "home": {
+    "greeting": "Good day",
+    "balance": "Balance",
+    "income_month": "Income this month",
+    "expense_month": "Expense this month",
+    "recent": "Recent transactions",
+    "goals": "Goals"
+  },
+  "forecast": {
+    "title": "AI Forecast",
+    "horizon": "Horizon (days)",
+    "run": "Run forecast",
+    "loading": "Calculating…",
+    "chart_title": "History and forecast"
+  },
+  "disclaimer": "This forecast is model-generated and is not investment advice. Make your own decisions or consult a licensed advisor."
+}

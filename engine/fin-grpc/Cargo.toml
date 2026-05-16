@@ -1,0 +1,16 @@
+[package]
+name = "fin-grpc"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "fin-engine"
+path = "src/main.rs"
+
+[dependencies]
+fin-math = { path = "../fin-math" }
+axum = { version = "0.7", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tower-http = { version = "0.5", features = ["cors"] }

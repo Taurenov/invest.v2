@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package fin_engine.v1;
+
+option go_package = "github.com/fin-helper/backend/internal/pb/fin_engine/v1;finenginev1";
+
+service FinEngine {
+  rpc CalculateRoi(RoiRequest) returns (RoiResponse);
+  rpc Predict(PredictRequest) returns (PredictResponse);
+}
+
+message RoiRequest {
+  double initial = 1;
+  double current = 2;
+}
+
+message RoiResponse {
+  double roi_percent = 1;
+}
+
+message PredictRequest {
+  repeated double prices = 1;
+  uint32 horizon_days = 2;
+  string symbol = 3;
+}
+
+message PredictResponse {
+  double predicted_value = 1;
+  double change_percent = 2;
+  double confidence = 3;
+  string model_version = 4;
+}

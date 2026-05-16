@@ -1,0 +1,10 @@
+[package]
+name = "fin-math"
+version = "0.1.0"
+edition = "2021"
+description = "Financial calculations: ROI, simple time-series forecast"
+
+[lib]
+crate-type = ["lib", "cdylib"]
+
+[dependencies]

@@ -1,0 +1,5 @@
+[workspace]
+resolver = "2"
+members = ["fin-math", "fin-grpc"]
+
+# fin-grpc binary: fin-engine (HTTP JSON, :50052)
