@@ -88,6 +88,16 @@ export type Forecast = {
   model_version: string;
 };
 
+export type ForecastHistoryItem = {
+  created_at: string;
+  horizon_days: number;
+  predicted_change_pct: number;
+  confidence: number;
+  model_version: string;
+};
+
+export type PricePoint = { time: string; close: number };
+
 export async function login(email: string, password: string) {
   const r = await api<{ token: string; user: User }>("/api/v1/auth/login", {
     method: "POST",
@@ -112,6 +122,15 @@ export function fetchMe() {
 
 export function fetchTransactions() {
   return api<{ data: Transaction[] }>("/api/v1/me/transactions");
+}
+
+export function searchTransactions(params: { q?: string; kind?: string; from?: string; to?: string }) {
+  const qs = new URLSearchParams();
+  if (params.q) qs.set("q", params.q);
+  if (params.kind) qs.set("kind", params.kind);
+  if (params.from) qs.set("from", params.from);
+  if (params.to) qs.set("to", params.to);
+  return api<{ data: Transaction[] }>(`/api/v1/me/transactions?${qs.toString()}`);
 }
 
 export function createTransaction(body: Partial<Transaction> & { kind: string; amount: number }) {
@@ -190,6 +209,18 @@ export function fetchForecast(symbol: string, horizonDays: number, locale: strin
   );
 }
 
+export function fetchForecastHistory(symbol: string, limit = 20) {
+  return api<{ data: ForecastHistoryItem[] }>(
+    `/api/v1/markets/${symbol}/forecast/history?exchange=MOEX&limit=${limit}`
+  );
+}
+
+export function fetchPriceHistory(symbol: string, points = 120) {
+  return api<{ data: { symbol: string; exchange: string; points: PricePoint[] } }>(
+    `/api/v1/markets/${symbol}/history?exchange=MOEX&points=${points}`
+  );
+}
+
 export type Holding = {
   id: string;
   symbol: string;
@@ -220,6 +251,59 @@ export type UserSettings = {
   theme: "dark" | "light" | "system";
   timezone: string;
 };
+
+export type Tag = { id: string; name: string; color?: string; created_at: string };
+export type Budget = { id: string; category_id: string; amount: number; currency: string; period: string };
+export type BudgetStatus = { budget: Budget; spent: number; remaining: number; percent: number };
+export type Recurring = {
+  id: string;
+  kind: string;
+  category_id?: string;
+  amount: number;
+  currency: string;
+  description?: string;
+  schedule: "daily" | "weekly" | "monthly";
+  day_of_month?: number;
+  day_of_week?: number;
+  next_run_at: string;
+  is_active: boolean;
+};
+
+export function fetchTags() {
+  return api<{ data: Tag[] }>("/api/v1/me/tags");
+}
+export function createTag(name: string, color = "#3b82f6") {
+  return api<{ data: Tag }>("/api/v1/me/tags", { method: "POST", body: JSON.stringify({ name, color }) });
+}
+export function deleteTag(id: string) {
+  return api<void>(`/api/v1/me/tags/${id}`, { method: "DELETE" });
+}
+export function setTransactionTags(txID: string, tagIDs: string[]) {
+  return api<void>(`/api/v1/me/transactions/${txID}/tags`, { method: "PUT", body: JSON.stringify({ tag_ids: tagIDs }) });
+}
+
+export function fetchBudgets() {
+  return api<{ data: BudgetStatus[] }>("/api/v1/me/budgets");
+}
+export function upsertBudget(category_id: string, amount: number, currency = "RUB") {
+  return api<{ data: Budget }>("/api/v1/me/budgets", { method: "POST", body: JSON.stringify({ category_id, amount, currency }) });
+}
+export function deleteBudget(id: string) {
+  return api<void>(`/api/v1/me/budgets/${id}`, { method: "DELETE" });
+}
+
+export function fetchRecurring() {
+  return api<{ data: Recurring[] }>("/api/v1/me/recurring");
+}
+export function createRecurring(body: Partial<Recurring> & { kind: string; amount: number; schedule: string }) {
+  return api<{ data: Recurring }>("/api/v1/me/recurring", { method: "POST", body: JSON.stringify(body) });
+}
+export function toggleRecurring(id: string, active: boolean) {
+  return api<void>(`/api/v1/me/recurring/${id}/toggle?active=${active}`, { method: "POST" });
+}
+export function deleteRecurring(id: string) {
+  return api<void>(`/api/v1/me/recurring/${id}`, { method: "DELETE" });
+}
 
 export type Alert = { id: string; type: string; title: string; message: string; read: boolean };
 
@@ -329,4 +413,32 @@ export function formatMoney(amount: number, currency = "RUB") {
     currency,
     maximumFractionDigits: 0,
   }).format(amount);
+}
+
+export function exportLocalBackup() {
+  const payload = {
+    token: localStorage.getItem(TOKEN_KEY),
+    user: localStorage.getItem(USER_KEY),
+    settings: localStorage.getItem("fin_settings_cache"),
+    txCache: localStorage.getItem("offline_tx_cache_v1"),
+    txQueue: localStorage.getItem("offline_tx_queue_v1"),
+    exported_at: new Date().toISOString(),
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `fin-helper-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function restoreLocalBackup(file: File) {
+  const text = await file.text();
+  const data = JSON.parse(text) as Record<string, string | null>;
+  if (typeof data.token === "string") localStorage.setItem(TOKEN_KEY, data.token);
+  if (typeof data.user === "string") localStorage.setItem(USER_KEY, data.user);
+  if (typeof data.settings === "string") localStorage.setItem("fin_settings_cache", data.settings);
+  if (typeof data.txCache === "string") localStorage.setItem("offline_tx_cache_v1", data.txCache);
+  if (typeof data.txQueue === "string") localStorage.setItem("offline_tx_queue_v1", data.txQueue);
 }

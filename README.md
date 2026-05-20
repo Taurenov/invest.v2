@@ -61,7 +61,7 @@ npm run tauri:build
 
 `npm run dev` — только для правки UI в браузере, **не** то, что отдаёте пользователям.
 
-**Приоритет 1** — [docs/PRIORITY_1.md](docs/PRIORITY_1.md) · **Приоритет 2** — [docs/PRIORITY_2.md](docs/PRIORITY_2.md) (портфель, watchlist, аналитика, настройки, уведомления).
+**Приоритет 1** — [docs/PRIORITY_1.md](docs/PRIORITY_1.md) · **Приоритет 2** — [docs/PRIORITY_2.md](docs/PRIORITY_2.md) · **Приоритет 3** — [docs/PRIORITY_3.md](docs/PRIORITY_3.md) · **Приоритет 4** — [docs/PRIORITY_4.md](docs/PRIORITY_4.md) · **Приоритет 5** — [docs/PRIORITY_5.md](docs/PRIORITY_5.md).
 
 ## Структура
 
@@ -69,7 +69,7 @@ npm run tauri:build
 |------|----------|
 | `apps/desktop/` | Tauri 2 + React, i18n ru/en, экраны |
 | `backend/` | REST API, WebSocket котировок |
-| `engine/fin-grpc/` | Rust: gRPC + HTTP JSON |
+| `engine/fin-grpc/` | Rust: HTTP JSON engine |
 | `engine/fin-math/` | ROI, линейный прогноз |
 | `migrations/` | SQL-схема и seed |
 | `docker-compose.yml` | Postgres + Redis |
@@ -79,10 +79,18 @@ npm run tauri:build
 
 | Метод | Путь |
 |-------|------|
-| GET | `/api/v1/users/{id}/transactions` |
-| GET | `/api/v1/users/{id}/goals` |
-| GET | `/api/v1/markets/{symbol}/quote?exchange=MOEX` |
-| GET | `/api/v1/markets/{symbol}/forecast?horizon_days=7&locale=ru` |
+| POST | `/api/v1/auth/login` / `/api/v1/auth/register` |
+| GET/POST/PATCH/DELETE | `/api/v1/me/transactions` |
+| GET/POST | `/api/v1/me/goals`, `/api/v1/me/goals/{goalID}/contribute` |
+| GET/POST/DELETE | `/api/v1/me/watchlist`, `/api/v1/me/watchlist/items` |
+| GET/POST/DELETE | `/api/v1/me/portfolio`, `/api/v1/me/portfolio/holdings` |
+| GET/PATCH | `/api/v1/me/settings` |
+| GET | `/api/v1/me/analytics`, `/api/v1/me/analytics/export.csv` |
+| GET | `/api/v1/markets/{symbol}/quote` |
+| GET | `/api/v1/markets/{symbol}/summary` |
+| GET | `/api/v1/markets/{symbol}/forecast` |
+| GET | `/api/v1/markets/{symbol}/forecast/history` |
+| GET | `/api/v1/markets/{symbol}/history` |
 | WS | `/ws/quotes` |
 
 Заголовок: `Authorization: Bearer dev-token`

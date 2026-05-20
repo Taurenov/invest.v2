@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Category, createTransaction, fetchCategories } from "../api/client";
+import { enqueue } from "../offline/store";
 
 type Props = {
   onSaved: () => void;
@@ -26,14 +27,19 @@ export default function TransactionForm({ onSaved, onClose }: Props) {
     e.preventDefault();
     const val = parseFloat(amount);
     if (!val || val <= 0) return;
-    await createTransaction({
+    const payload = {
       kind,
       amount: val,
       currency: "RUB",
       description,
       category_id: categoryId || undefined,
       occurred_at: new Date(date).toISOString(),
-    } as never);
+    } as never;
+    try {
+      await createTransaction(payload);
+    } catch {
+      enqueue({ type: "create", payload });
+    }
     onSaved();
     onClose();
   };

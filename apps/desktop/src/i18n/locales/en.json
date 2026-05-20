@@ -9,7 +9,8 @@
     "calculator": "Calculator",
     "portfolio": "Portfolio",
     "settings": "Settings",
-    "forecast": "AI Forecast"
+    "forecast": "AI Forecast",
+    "extras": "Extras"
   },
   "common": { "loading": "Loading…" },
   "portfolio": {
@@ -45,7 +46,15 @@
     "theme_system": "System",
     "locale": "Language",
     "currency": "Currency",
-    "timezone": "Timezone"
+    "timezone": "Timezone",
+    "backup_export": "Export backup",
+    "backup_import": "Import backup",
+    "backup_ok": "Backup restored",
+    "backup_fail": "Backup restore failed",
+    "update_check": "Check updates",
+    "update_available": "Update is available",
+    "update_none": "No updates found",
+    "update_unavailable": "Update check unavailable"
   },
   "auth": {
     "login": "Sign in",
@@ -59,6 +68,10 @@
   },
   "tx": {
     "add": "Add transaction",
+    "import_csv": "Import CSV",
+    "search": "Search…",
+    "apply": "Apply",
+    "all": "All",
     "kind": "Type",
     "income": "Income",
     "expense": "Expense",
@@ -68,6 +81,19 @@
     "date": "Date",
     "save": "Save",
     "cancel": "Cancel"
+  },
+  "extras": {
+    "tags": "Tags",
+    "budgets": "Category budgets",
+    "recurring": "Recurring transactions",
+    "name": "Name",
+    "add": "Add",
+    "save": "Save",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "next_run": "Next run",
+    "active": "Active"
   },
   "goals": {
     "title": "Financial goals",

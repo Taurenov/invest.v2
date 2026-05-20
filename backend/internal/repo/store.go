@@ -10,9 +10,20 @@ import (
 
 type TransactionStore interface {
 	ListByUser(ctx context.Context, userID uuid.UUID) ([]domain.Transaction, error)
+	ListByUserFiltered(ctx context.Context, userID uuid.UUID, q TransactionQuery) ([]domain.Transaction, error)
 	CreateTransaction(ctx context.Context, userID uuid.UUID, t CreateTransactionInput) (*domain.Transaction, error)
 	UpdateTransaction(ctx context.Context, userID, txID uuid.UUID, t UpdateTransactionInput) (*domain.Transaction, error)
 	DeleteTransaction(ctx context.Context, userID, txID uuid.UUID) error
+}
+
+type TransactionQuery struct {
+	Text      string
+	Kind      string
+	From      *time.Time
+	To        *time.Time
+	TagIDs    []uuid.UUID
+	CategoryID *uuid.UUID
+	Limit     int
 }
 
 type CreateTransactionInput struct {

@@ -54,6 +54,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <span>⚙</span>
           <span className="nav-label">{t("nav.settings")}</span>
         </NavLink>
+        <NavLink to="/extras" className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}>
+          <span>✨</span>
+          <span className="nav-label">{t("nav.extras")}</span>
+        </NavLink>
         <p style={{ marginTop: "auto", padding: "1rem" }} className="nav-label">
           <small>{user?.display_name || user?.email}</small>
           <br />

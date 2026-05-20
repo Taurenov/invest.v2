@@ -18,7 +18,28 @@ type MeTransactions struct {
 
 func (h *MeTransactions) List(w http.ResponseWriter, r *http.Request) {
 	uid, _ := middleware.UserIDFromContext(r.Context())
-	items, err := h.Store.ListByUser(r.Context(), uid)
+	q := r.URL.Query().Get("q")
+	kind := r.URL.Query().Get("kind")
+	var from *time.Time
+	if v := r.URL.Query().Get("from"); v != "" {
+		if t, err := time.Parse("2006-01-02", v); err == nil {
+			from = &t
+		}
+	}
+	var to *time.Time
+	if v := r.URL.Query().Get("to"); v != "" {
+		if t, err := time.Parse("2006-01-02", v); err == nil {
+			tt := t.Add(24 * time.Hour)
+			to = &tt
+		}
+	}
+	var items []domain.Transaction
+	var err error
+	if q != "" || kind != "" || from != nil || to != nil {
+		items, err = h.Store.ListByUserFiltered(r.Context(), uid, repo.TransactionQuery{Text: q, Kind: kind, From: from, To: to})
+	} else {
+		items, err = h.Store.ListByUser(r.Context(), uid)
+	}
 	if err != nil {
 		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
 		return

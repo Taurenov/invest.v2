@@ -12,6 +12,7 @@ services:
       - ./migrations/002_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
       - ./migrations/003_goal_contributions.sql:/docker-entrypoint-initdb.d/03_goal_contributions.sql:ro
       - ./migrations/004_priority2.sql:/docker-entrypoint-initdb.d/04_priority2.sql:ro
+      - ./migrations/005_priority5.sql:/docker-entrypoint-initdb.d/05_priority5.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U fin -d finhelper"]
       interval: 3s

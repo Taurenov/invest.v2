@@ -33,12 +33,12 @@ type loginReq struct {
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req registerReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error":"bad json"}`, http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "bad json")
 		return
 	}
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
 	if req.Email == "" || len(req.Password) < 6 {
-		http.Error(w, `{"error":"email and password (min 6) required"}`, http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "email and password (min 6) required")
 		return
 	}
 	if req.DisplayName == "" {
@@ -47,23 +47,23 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	hash, err := auth.HashPassword(req.Password)
 	if err != nil {
-		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "internal")
 		return
 	}
 
 	u, err := h.Users.CreateUser(r.Context(), req.Email, hash, req.DisplayName)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "exists") {
-			http.Error(w, `{"error":"email already registered"}`, http.StatusConflict)
+			writeError(w, http.StatusConflict, "email already registered")
 			return
 		}
-		http.Error(w, `{"error":"could not register"}`, http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "could not register")
 		return
 	}
 
 	token, err := auth.IssueToken(h.JWTSecret, u.ID, u.Email, h.TokenTTL)
 	if err != nil {
-		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "internal")
 		return
 	}
 
@@ -73,7 +73,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req loginReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error":"bad json"}`, http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "bad json")
 		return
 	}
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
@@ -81,20 +81,20 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	id, hash, name, err := h.Users.GetByEmail(r.Context(), req.Email)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			http.Error(w, `{"error":"invalid credentials"}`, http.StatusUnauthorized)
+			writeError(w, http.StatusUnauthorized, "invalid credentials")
 			return
 		}
-		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "internal")
 		return
 	}
 	if !auth.CheckPassword(hash, req.Password) {
-		http.Error(w, `{"error":"invalid credentials"}`, http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 
 	token, err := auth.IssueToken(h.JWTSecret, id, req.Email, h.TokenTTL)
 	if err != nil {
-		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "internal")
 		return
 	}
 
@@ -107,18 +107,13 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	uid, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 	u, err := h.Users.GetByID(r.Context(), uid)
 	if err != nil {
-		http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
+		writeError(w, http.StatusNotFound, "not found")
 		return
 	}
 	writeJSON(w, map[string]any{"data": u})
-}
-
-func writeJSON(w http.ResponseWriter, v any) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	_ = json.NewEncoder(w).Encode(v)
 }

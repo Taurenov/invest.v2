@@ -13,10 +13,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<UserSettings | null>(null);
 
   useEffect(() => {
+    const cached = localStorage.getItem("fin_settings_cache");
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as UserSettings;
+        setSettings(parsed);
+        applyDom(parsed);
+      } catch {
+        /* ignore */
+      }
+    }
     fetchSettings()
       .then((r) => {
         setSettings(r.data);
         applyDom(r.data);
+        localStorage.setItem("fin_settings_cache", JSON.stringify(r.data));
         i18n.changeLanguage(r.data.locale);
       })
       .catch(() => {
@@ -33,10 +44,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const apply = async (patch: Partial<UserSettings>) => {
     const next = { ...settings!, ...patch } as UserSettings;
-    const r = await updateSettings(next);
-    setSettings(r.data);
-    applyDom(r.data);
-    if (r.data.locale) i18n.changeLanguage(r.data.locale);
+    try {
+      const r = await updateSettings(next);
+      setSettings(r.data);
+      localStorage.setItem("fin_settings_cache", JSON.stringify(r.data));
+      applyDom(r.data);
+      if (r.data.locale) i18n.changeLanguage(r.data.locale);
+    } catch {
+      // offline fallback: keep settings locally
+      setSettings(next);
+      localStorage.setItem("fin_settings_cache", JSON.stringify(next));
+      applyDom(next);
+      if (next.locale) i18n.changeLanguage(next.locale);
+    }
   };
 
   return <Ctx.Provider value={{ settings, apply }}>{children}</Ctx.Provider>;

@@ -37,6 +37,9 @@ func main() {
 		settings    repo.SettingsStore
 		analytics   repo.AnalyticsStore
 		summaries   repo.SummaryStore
+		tags        repo.TagStore
+		budgets     repo.BudgetStore
+		recurring   repo.RecurringStore
 		pgDB        *repo.Postgres
 	)
 
@@ -55,6 +58,9 @@ func main() {
 		settings = pg
 		analytics = pg
 		summaries = pg
+		tags = pg
+		budgets = pg
+		recurring = pg
 		log.Println("using PostgreSQL")
 	} else {
 		demoUser := uuid.MustParse("00000000-0000-4000-8000-000000000001")
@@ -70,6 +76,9 @@ func main() {
 		settings = repo.NewMemorySettingsStore()
 		analytics = &repo.MemoryAnalyticsStore{Tx: txStore}
 		summaries = repo.MemorySummaryStore{}
+		tags = repo.NewMemoryTagStore()
+		budgets = repo.NewMemoryBudgetStore()
+		recurring = repo.NewMemoryRecurringStore()
 		log.Println("memory mode — set DATABASE_URL for Postgres")
 	}
 
@@ -146,13 +155,47 @@ func main() {
 	sumH := &handlers.SummaryHandler{Store: summaries}
 	mux.Handle("GET /api/v1/markets/{symbol}/summary", jwtAuth(http.HandlerFunc(sumH.Get)))
 
+	// Priority 5
+	tagsH := &handlers.TagsHandler{Store: tags}
+	mux.Handle("GET /api/v1/me/tags", jwtAuth(http.HandlerFunc(tagsH.List)))
+	mux.Handle("POST /api/v1/me/tags", jwtAuth(http.HandlerFunc(tagsH.Create)))
+	mux.Handle("DELETE /api/v1/me/tags/{tagID}", jwtAuth(http.HandlerFunc(tagsH.Delete)))
+	mux.Handle("PUT /api/v1/me/transactions/{txID}/tags", jwtAuth(http.HandlerFunc(tagsH.SetTxTags)))
+
+	budH := &handlers.BudgetsHandler{Store: budgets, Alerts: alertHub}
+	mux.Handle("GET /api/v1/me/budgets", jwtAuth(http.HandlerFunc(budH.List)))
+	mux.Handle("POST /api/v1/me/budgets", jwtAuth(http.HandlerFunc(budH.Upsert)))
+	mux.Handle("DELETE /api/v1/me/budgets/{budgetID}", jwtAuth(http.HandlerFunc(budH.Delete)))
+
+	recH := &handlers.RecurringHandler{Store: recurring}
+	mux.Handle("GET /api/v1/me/recurring", jwtAuth(http.HandlerFunc(recH.List)))
+	mux.Handle("POST /api/v1/me/recurring", jwtAuth(http.HandlerFunc(recH.Create)))
+	mux.Handle("POST /api/v1/me/recurring/{recurringID}/toggle", jwtAuth(http.HandlerFunc(recH.Toggle)))
+	mux.Handle("DELETE /api/v1/me/recurring/{recurringID}", jwtAuth(http.HandlerFunc(recH.Delete)))
+
 	if pgDB != nil {
 		fcH := &handlers.ForecastHandler{DB: pgDB, Engine: eng}
 		mux.Handle("GET /api/v1/markets/{symbol}/forecast", jwtAuth(http.HandlerFunc(fcH.Predict)))
+		mux.Handle("GET /api/v1/markets/{symbol}/forecast/history", jwtAuth(http.HandlerFunc(fcH.History)))
+		mux.Handle("GET /api/v1/markets/{symbol}/history", jwtAuth(http.HandlerFunc(fcH.PriceHistory)))
 	}
 
 	hub := ws.NewHub(quoteProvider)
 	mux.Handle("GET /ws/quotes", jwtAuth(hub))
+
+	// recurring runner (simple ticker)
+	go func() {
+		t := time.NewTicker(1 * time.Minute)
+		defer t.Stop()
+		for range t.C {
+			if recurring != nil {
+				n, _ := recurring.RunRecurringDue(context.Background(), time.Now())
+				if n > 0 {
+					log.Printf("recurring applied: %d", n)
+				}
+			}
+		}
+	}()
 
 	go func() {
 		ticker := time.NewTicker(30 * time.Second)

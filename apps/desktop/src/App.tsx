@@ -12,6 +12,7 @@ import GoalsPage from "./pages/Goals";
 import CalculatorPage from "./pages/Calculator";
 import PortfolioPage from "./pages/Portfolio";
 import SettingsPage from "./pages/Settings";
+import ExtrasPage from "./pages/Extras";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
@@ -33,6 +34,7 @@ function PrivateRoutes() {
           <Route path="/goals" element={<GoalsPage />} />
           <Route path="/calculator" element={<CalculatorPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/extras" element={<ExtrasPage />} />
         </Routes>
       </Layout>
     </ThemeProvider>

@@ -6,7 +6,9 @@ import (
 	"strconv"
 
 	"github.com/fin-helper/backend/internal/engine"
+	"github.com/fin-helper/backend/internal/http/middleware"
 	"github.com/fin-helper/backend/internal/repo"
+	"github.com/google/uuid"
 )
 
 type ForecastHandler struct {
@@ -48,6 +50,21 @@ func (h *ForecastHandler) Predict(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"forecast engine unavailable"}`, http.StatusServiceUnavailable)
 		return
 	}
+	narrative := buildNarrative(locale, symbol, pred.ChangePercent, horizon)
+	var uidPtr *uuid.UUID
+	if uid, ok := middleware.UserIDFromContext(r.Context()); ok {
+		uidPtr = &uid
+	}
+	_ = h.DB.SaveForecast(
+		r.Context(),
+		inst.ID,
+		uidPtr,
+		horizon,
+		pred.ChangePercent,
+		pred.Confidence,
+		narrative,
+		pred.ModelVersion,
+	)
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{
@@ -59,8 +76,60 @@ func (h *ForecastHandler) Predict(w http.ResponseWriter, r *http.Request) {
 			"predicted_change_pct": pred.ChangePercent,
 			"confidence":           pred.Confidence,
 			"model_version":        pred.ModelVersion,
-			"narrative": buildNarrative(locale, symbol, pred.ChangePercent, horizon),
+			"narrative":            narrative,
 			"disclaimer":           disclaimer,
+		},
+	})
+}
+
+func (h *ForecastHandler) History(w http.ResponseWriter, r *http.Request) {
+	symbol := r.PathValue("symbol")
+	exchange := r.URL.Query().Get("exchange")
+	if exchange == "" {
+		exchange = "MOEX"
+	}
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	inst, err := h.DB.GetInstrument(r.Context(), symbol, exchange)
+	if err != nil {
+		http.Error(w, `{"error":"instrument not found"}`, http.StatusNotFound)
+		return
+	}
+	var uidPtr *uuid.UUID
+	if uid, ok := middleware.UserIDFromContext(r.Context()); ok {
+		uidPtr = &uid
+	}
+	items, err := h.DB.ListForecastHistory(r.Context(), inst.ID, uidPtr, limit)
+	if err != nil {
+		http.Error(w, `{"error":"internal error"}`, http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"data": items})
+}
+
+func (h *ForecastHandler) PriceHistory(w http.ResponseWriter, r *http.Request) {
+	symbol := r.PathValue("symbol")
+	exchange := r.URL.Query().Get("exchange")
+	if exchange == "" {
+		exchange = "MOEX"
+	}
+	points, _ := strconv.Atoi(r.URL.Query().Get("points"))
+	inst, err := h.DB.GetInstrument(r.Context(), symbol, exchange)
+	if err != nil {
+		http.Error(w, `{"error":"instrument not found"}`, http.StatusNotFound)
+		return
+	}
+	data, err := h.DB.ListPricePointsByInstrument(r.Context(), inst.ID, points)
+	if err != nil {
+		http.Error(w, `{"error":"internal error"}`, http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"data": map[string]any{
+			"symbol":   symbol,
+			"exchange": exchange,
+			"points":   data,
 		},
 	})
 }

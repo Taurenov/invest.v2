@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 
@@ -6,8 +6,14 @@ static CHILDREN: Mutex<Vec<Child>> = Mutex::new(Vec::new());
 
 /// Запускает Go API и Rust engine, если заданы пути (для сборки «всё в одном»).
 pub fn spawn_sidecars() {
-    let api = std::env::var("FIN_API_BIN").ok();
-    let engine = std::env::var("FIN_ENGINE_BIN").ok();
+    let api = resolve_bin(
+        "FIN_API_BIN",
+        &["fin-api.exe", "fin-api-x86_64-pc-windows-msvc.exe"],
+    );
+    let engine = resolve_bin(
+        "FIN_ENGINE_BIN",
+        &["fin-engine.exe", "fin-engine-x86_64-pc-windows-msvc.exe"],
+    );
     if api.is_none() && engine.is_none() {
         return;
     }
@@ -36,9 +42,35 @@ fn spawn_bin(path: &str, _args: &[&str]) -> Option<Child> {
         return None;
     }
     Command::new(p)
+        .env("API_ADDR", "127.0.0.1:8080")
+        .env("ENGINE_HTTP_URL", "http://127.0.0.1:50052")
+        .env("ENGINE_HTTP_ADDR", "127.0.0.1:50052")
+        .env("API_TOKEN", std::env::var("VITE_API_TOKEN").unwrap_or_else(|_| "dev-token".to_string()))
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
         .ok()
+}
+
+fn resolve_bin(env_name: &str, candidates: &[&str]) -> Option<String> {
+    if let Ok(v) = std::env::var(env_name) {
+        if Path::new(&v).exists() {
+            return Some(v);
+        }
+    }
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))?;
+    for c in candidates {
+        let direct = exe_dir.join(c);
+        if direct.exists() {
+            return Some(direct.to_string_lossy().to_string());
+        }
+        let bundled = exe_dir.join("binaries").join(c);
+        if bundled.exists() {
+            return Some(bundled.to_string_lossy().to_string());
+        }
+    }
+    None
 }
