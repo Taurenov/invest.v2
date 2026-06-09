@@ -50,10 +50,10 @@ type CategoryStore interface {
 }
 
 type CreateCategoryInput struct {
-	Name  string
-	Kind  string
-	Icon  string
-	Color string
+	Name  string `json:"name"`
+	Kind  string `json:"kind"`
+	Icon  string `json:"icon"`
+	Color string `json:"color"`
 }
 
 type GoalStore interface {
@@ -63,11 +63,11 @@ type GoalStore interface {
 }
 
 type CreateGoalInput struct {
-	Title        string
-	GoalType     string
-	TargetAmount float64
-	Currency     string
-	Deadline     *time.Time
+	Title        string     `json:"title"`
+	GoalType     string     `json:"goal_type"`
+	TargetAmount float64    `json:"target_amount"`
+	Currency     string     `json:"currency"`
+	Deadline     *time.Time `json:"deadline"`
 }
 
 type UserStore interface {

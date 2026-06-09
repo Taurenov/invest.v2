@@ -23,8 +23,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchMe()
       .then((r) => setUser(r.data))
       .catch(() => {
-        clearSession();
-        setUser(null);
+        // dev-token / офлайн: не сбрасываем сессию, если пользователь уже в localStorage
+        if (!getUser()) {
+          clearSession();
+          setUser(null);
+        }
       })
       .finally(() => setLoading(false));
   }, []);

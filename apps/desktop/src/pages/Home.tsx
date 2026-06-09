@@ -2,7 +2,15 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import TransactionForm from "../components/TransactionForm";
 import { fetchGoals, fetchTransactions, formatMoney, type Goal, type Transaction } from "../api/client";
-import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 export default function Home() {
   const { t } = useTranslation();
@@ -23,23 +31,27 @@ export default function Home() {
   const expense = tx.filter((x) => x.kind === "expense").reduce((s, x) => s + x.amount, 0);
   const balance = income - expense;
 
-  const chartData = tx.slice(0, 8).map((x, i) => ({
-    name: new Date(x.occurred_at).toLocaleDateString("ru-RU", { day: "2-digit", month: "short" }),
-    v: x.kind === "income" ? x.amount : -x.amount,
-    i,
-  }));
+  const chartData = tx
+    .slice()
+    .sort((a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime())
+    .slice(-12)
+    .map((x) => ({
+      name: new Date(x.occurred_at).toLocaleDateString("ru-RU", { day: "2-digit", month: "short" }),
+      v: x.kind === "income" ? x.amount : -x.amount,
+    }));
 
   return (
     <>
-      <section className="toolbar">
-        <h1 style={{ margin: 0 }}>{t("home.greeting")}</h1>
+      <div className="page-header">
+        <h1>{t("home.greeting")}</h1>
         <button type="button" onClick={() => setShowForm(true)}>
           + {t("tx.add")}
         </button>
-      </section>
+      </div>
       {showForm && <TransactionForm onSaved={reload} onClose={() => setShowForm(false)} />}
+
       <section className="cards">
-        <article className="card">
+        <article className="card card-hero" style={{ gridColumn: "span 1" }}>
           <p className="label">{t("home.balance")}</p>
           <p className="value">{formatMoney(balance)}</p>
         </article>
@@ -55,53 +67,63 @@ export default function Home() {
 
       <section className="grid-2">
         <article className="card">
-          <p className="label">{t("home.recent")} — поток</p>
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={chartData}>
-              <XAxis dataKey="name" stroke="var(--muted)" fontSize={12} />
-              <YAxis stroke="var(--muted)" fontSize={12} />
-              <Tooltip />
-              <Line type="monotone" dataKey="v" stroke="var(--primary)" dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
+          <p className="label">{t("home.recent")}</p>
+          <div className="chart-wrap">
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="homeFlow" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#5b6ef5" stopOpacity={0.5} />
+                    <stop offset="100%" stopColor="#5b6ef5" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                <XAxis dataKey="name" stroke="var(--muted)" fontSize={11} tickLine={false} />
+                <YAxis stroke="var(--muted)" fontSize={11} tickLine={false} />
+                <Tooltip />
+                <Area
+                  type="monotone"
+                  dataKey="v"
+                  stroke="#5b6ef5"
+                  strokeWidth={2}
+                  fill="url(#homeFlow)"
+                  animationDuration={700}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </article>
         <article className="card">
           <p className="label">{t("home.goals")}</p>
           {goals.map((g) => {
             const pct = Math.min(100, (g.current_amount / g.target_amount) * 100);
             return (
-              <section key={g.id} style={{ marginTop: "1rem" }}>
-                <p>{g.title}</p>
-                <p className="value" style={{ fontSize: "1rem" }}>
+              <section key={g.id} style={{ marginTop: "1.1rem" }}>
+                <p style={{ fontWeight: 600 }}>{g.title}</p>
+                <p className="value" style={{ fontSize: "1rem", marginTop: "0.25rem" }}>
                   {pct.toFixed(0)}% · {formatMoney(g.current_amount)} / {formatMoney(g.target_amount)}
                 </p>
-                <p className="progress" style={{ display: "block" }}>
-                  <span style={{ display: "block", width: `${pct}%`, height: 8, background: "var(--primary)", borderRadius: 4 }} />
+                <p className="progress">
+                  <span style={{ width: `${pct}%` }} />
                 </p>
               </section>
             );
           })}
+          {goals.length === 0 && <p className="label" style={{ marginTop: "1rem" }}>—</p>}
         </article>
       </section>
 
-      <article className="card" style={{ marginTop: "1rem" }}>
+      <article className="card" style={{ marginTop: "1.15rem" }}>
         <p className="label">{t("home.recent")}</p>
         <table>
-          <thead>
-            <tr>
-              <th>Описание</th>
-              <th>Дата</th>
-              <th>Сумма</th>
-            </tr>
-          </thead>
           <tbody>
-            {tx.map((row) => (
-              <tr key={row.id}>
-                <td>{row.description}</td>
-                <td>{new Date(row.occurred_at).toLocaleDateString()}</td>
-                <td className={row.kind === "income" ? "up" : "down"}>
-                  {row.kind === "income" ? "+" : "−"}
-                  {formatMoney(row.amount)}
+            {tx.slice(0, 6).map((x) => (
+              <tr key={x.id}>
+                <td>{new Date(x.occurred_at).toLocaleDateString()}</td>
+                <td>{x.description || "—"}</td>
+                <td className={x.kind === "income" ? "up" : "down"}>
+                  {x.kind === "income" ? "+" : "−"}
+                  {formatMoney(x.amount)}
                 </td>
               </tr>
             ))}

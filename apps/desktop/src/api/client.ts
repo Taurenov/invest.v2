@@ -31,14 +31,32 @@ function authHeader(): Record<string, string> {
   return { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
 }
 
+export function parseApiError(raw: string, status: number): string {
+  try {
+    const j = JSON.parse(raw) as { error?: string };
+    if (j.error) return j.error;
+  } catch {
+    /* plain text */
+  }
+  if (status === 401) return "Нет доступа — войдите снова";
+  if (status === 503) return "Сервис недоступен — проверьте engine/API";
+  if (status === 404) return "Данные не найдены";
+  return raw || `Ошибка API ${status}`;
+}
+
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: { ...authHeader(), ...init?.headers },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...init,
+      headers: { ...authHeader(), ...init?.headers },
+    });
+  } catch {
+    throw new Error("Нет связи с API — проверьте, что backend запущен на " + API_BASE);
+  }
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text || `API ${res.status}`);
+    throw new Error(parseApiError(text, res.status));
   }
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
@@ -80,12 +98,26 @@ export type Quote = {
 
 export type Forecast = {
   symbol: string;
+  company_name?: string;
+  sector?: string;
   predicted_change_pct: number;
   predicted_value: number;
   confidence: number;
   narrative: string;
   disclaimer: string;
   model_version: string;
+};
+
+export type MoexInstrument = {
+  symbol: string;
+  exchange: string;
+  name: string;
+  short_name?: string;
+  sector: string;
+  description?: string;
+  price?: number;
+  change_pct?: number;
+  market_cap?: string;
 };
 
 export type ForecastHistoryItem = {
@@ -317,9 +349,22 @@ export type AnalyticsReport = {
 export type CompanySummary = {
   symbol: string;
   exchange: string;
+  name?: string;
+  sector?: string;
   summary_text: string;
   key_metrics: Record<string, unknown>;
 };
+
+export function fetchMoexInstruments() {
+  return fetchMarketCatalog("", 500);
+}
+
+export function fetchMarketCatalog(q = "", limit = 300) {
+  const qs = new URLSearchParams();
+  if (q) qs.set("q", q);
+  if (limit) qs.set("limit", String(limit));
+  return api<{ data: MoexInstrument[]; count: number }>(`/api/v1/markets/instruments?${qs}`);
+}
 
 export function fetchPortfolio() {
   return api<{ data: Portfolio }>("/api/v1/me/portfolio");

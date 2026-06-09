@@ -40,6 +40,8 @@ type AnalyticsReport struct {
 type CompanySummary struct {
 	Symbol      string         `json:"symbol"`
 	Exchange    string         `json:"exchange"`
+	Name        string         `json:"name"`
+	Sector      string         `json:"sector"`
 	SummaryText string         `json:"summary_text"`
 	KeyMetrics  map[string]any `json:"key_metrics"`
 }

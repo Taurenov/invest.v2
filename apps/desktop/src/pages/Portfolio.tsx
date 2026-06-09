@@ -1,28 +1,33 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import NumberField from "../components/NumberField";
 import {
   addHolding,
+  fetchMarketCatalog,
   fetchPortfolio,
   formatMoney,
   removeHolding,
+  type MoexInstrument,
   type Portfolio,
 } from "../api/client";
 
 export default function PortfolioPage() {
   const { t } = useTranslation();
   const [p, setP] = useState<Portfolio | null>(null);
+  const [instruments, setInstruments] = useState<MoexInstrument[]>([]);
   const [symbol, setSymbol] = useState("SBER");
-  const [qty, setQty] = useState("10");
-  const [cost, setCost] = useState("250");
+  const [qty, setQty] = useState(10);
+  const [cost, setCost] = useState(250);
 
   const load = () => fetchPortfolio().then((r) => setP(r.data)).catch(console.error);
   useEffect(() => {
     load();
+    fetchMarketCatalog("", 100).then((r) => setInstruments(r.data)).catch(() => {});
   }, []);
 
   const onAdd = async (e: FormEvent) => {
     e.preventDefault();
-    await addHolding({ symbol, quantity: parseFloat(qty), avg_cost: parseFloat(cost) });
+    await addHolding({ symbol, quantity: qty, avg_cost: cost });
     load();
   };
 
@@ -30,9 +35,11 @@ export default function PortfolioPage() {
 
   return (
     <>
-      <h1>{t("portfolio.title")}</h1>
+      <div className="page-header">
+        <h1>{t("portfolio.title")}</h1>
+      </div>
       <section className="cards">
-        <article className="card">
+        <article className="card card-hero">
           <p className="label">{t("portfolio.value")}</p>
           <p className="value">{formatMoney(p.total_value)}</p>
         </article>
@@ -48,11 +55,24 @@ export default function PortfolioPage() {
 
       <article className="card" style={{ marginBottom: "1rem" }}>
         <p className="label">{t("portfolio.add")}</p>
-        <form onSubmit={onAdd} className="toolbar">
-          <input value={symbol} onChange={(e) => setSymbol(e.target.value.toUpperCase())} placeholder="SBER" />
-          <input type="number" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="Qty" />
-          <input type="number" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="Avg" />
-          <button type="submit">{t("portfolio.add_btn")}</button>
+        <form onSubmit={onAdd} className="form-grid">
+          <label>
+            <span className="field-label">{t("portfolio.ticker")}</span>
+            <select value={symbol} onChange={(e) => setSymbol(e.target.value)}>
+              {instruments.length > 0
+                ? instruments.map((i) => (
+                    <option key={i.symbol} value={i.symbol}>
+                      {i.symbol} — {i.name}
+                    </option>
+                  ))
+                : <option value={symbol}>{symbol}</option>}
+            </select>
+          </label>
+          <NumberField label={t("portfolio.qty")} value={qty} onChange={setQty} min={0.001} step={1} />
+          <NumberField label={t("portfolio.price")} value={cost} onChange={setCost} min={0.01} step={1} suffix="₽" />
+          <div style={{ display: "flex", alignItems: "flex-end" }}>
+            <button type="submit">{t("portfolio.add_btn")}</button>
+          </div>
         </form>
       </article>
 

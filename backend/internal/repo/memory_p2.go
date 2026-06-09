@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/fin-helper/backend/internal/domain"
+	"github.com/fin-helper/backend/internal/market"
 	"github.com/google/uuid"
 )
 
@@ -184,9 +185,17 @@ func (MemorySummaryStore) EnsureInstrument(_ context.Context, _, _, _ string) (u
 }
 
 func (MemorySummaryStore) GetOrCreateSummary(_ context.Context, symbol, exchange string) (*domain.CompanySummary, error) {
+	name := symbol
+	sector := "Прочее"
+	text := symbol + " — демо-сводка."
+	if profile, ok := market.GetCompanyProfile(symbol, exchange); ok {
+		name = profile.Name
+		sector = profile.Sector
+		text = market.SummaryText(profile, "ru")
+	}
 	return &domain.CompanySummary{
-		Symbol: symbol, Exchange: exchange,
-		SummaryText: symbol + " — демо-сводка. Подключите PostgreSQL для кэширования обзоров.",
-		KeyMetrics:  map[string]any{"demo": true},
+		Symbol: symbol, Exchange: exchange, Name: name, Sector: sector,
+		SummaryText: text,
+		KeyMetrics:  map[string]any{"sector": sector, "name": name},
 	}, nil
 }

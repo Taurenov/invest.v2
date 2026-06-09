@@ -151,6 +151,9 @@ func main() {
 
 	quoteH := &handlers.QuotesHandler{Provider: quoteProvider}
 	mux.Handle("GET /api/v1/markets/{symbol}/quote", jwtAuth(http.HandlerFunc(quoteH.Get)))
+	mux.Handle("GET /api/v1/markets/instruments", jwtAuth(http.HandlerFunc(handlers.ListMOEXInstruments)))
+	mux.Handle("GET /api/v1/markets/catalog", jwtAuth(http.HandlerFunc(handlers.MarketCatalog)))
+	mux.Handle("POST /api/v1/markets/catalog/refresh", jwtAuth(http.HandlerFunc(handlers.RefreshMarketCatalog)))
 
 	sumH := &handlers.SummaryHandler{Store: summaries}
 	mux.Handle("GET /api/v1/markets/{symbol}/summary", jwtAuth(http.HandlerFunc(sumH.Get)))
@@ -221,6 +224,20 @@ func main() {
 
 	srv := &http.Server{Addr: cfg.APIAddr, Handler: root}
 	go hub.RunBroadcast(context.Background(), 3*time.Second)
+
+	go func() {
+		_ = market.DefaultCatalog.Refresh(context.Background())
+		t := time.NewTicker(2 * time.Minute)
+		defer t.Stop()
+		for range t.C {
+			_ = market.DefaultCatalog.Refresh(context.Background())
+		}
+	}()
+
+	if users != nil {
+		demo := uuid.MustParse("00000000-0000-4000-8000-000000000001")
+		_ = users.EnsureDefaultCategories(ctx, demo)
+	}
 
 	go func() {
 		log.Printf("api on %s", cfg.APIAddr)

@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Flash } from "../components/Flash";
 import {
   createRecurring,
   createTag,
@@ -24,29 +25,45 @@ export default function ExtrasPage() {
   const [budgets, setBudgets] = useState<BudgetStatus[]>([]);
   const [rec, setRec] = useState<Recurring[]>([]);
   const [cats, setCats] = useState<Category[]>([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
   const load = async () => {
-    const [tgs, bgs, rcs, cs] = await Promise.all([
-      fetchTags(),
-      fetchBudgets(),
-      fetchRecurring(),
-      fetchCategories(),
-    ]);
-    setTags(tgs.data);
-    setBudgets(bgs.data);
-    setRec(rcs.data);
-    setCats(cs.data.filter((c) => c.kind === "expense"));
+    setLoading(true);
+    setError("");
+    try {
+      const [tgs, bgs, rcs, cs] = await Promise.all([
+        fetchTags(),
+        fetchBudgets(),
+        fetchRecurring(),
+        fetchCategories(),
+      ]);
+      setTags(tgs.data);
+      setBudgets(bgs.data);
+      setRec(rcs.data);
+      setCats(cs.data.filter((c) => c.kind === "expense"));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Не удалось загрузить данные");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    load().catch(console.error);
+    load();
   }, []);
 
   const categoryMap = useMemo(() => new Map(cats.map((c) => [c.id, `${c.icon ?? ""} ${c.name}`])), [cats]);
 
   return (
     <>
-      <h1>{t("nav.extras")}</h1>
+      <div className="page-header">
+        <h1>{t("nav.extras")}</h1>
+        <button type="button" className="secondary" onClick={load} disabled={loading}>
+          {loading ? "…" : "↻"}
+        </button>
+      </div>
+      {error && <Flash kind="error">{error}</Flash>}
 
       <section className="grid-2">
         <article className="card">
@@ -92,19 +109,30 @@ export default function ExtrasPage() {
               </tr>
             </thead>
             <tbody>
-              {budgets.map((b) => (
-                <tr key={b.budget.id}>
-                  <td>{categoryMap.get(b.budget.category_id) ?? b.budget.category_id}</td>
-                  <td>
-                    {b.spent.toFixed(0)} / {b.budget.amount.toFixed(0)} ({b.percent.toFixed(0)}%)
-                  </td>
-                  <td>
-                    <button type="button" className="secondary" onClick={() => deleteBudget(b.budget.id).then(load)}>
-                      ×
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {budgets.map((b) => {
+                const pct = Math.min(100, b.percent);
+                const barClass = b.percent >= 100 ? "over" : b.percent >= 80 ? "warn" : "ok";
+                return (
+                  <tr key={b.budget.id}>
+                    <td>
+                      {categoryMap.get(b.budget.category_id) ?? b.budget.category_id}
+                      <div className="budget-bar">
+                        <span className={barClass} style={{ width: `${pct}%` }} />
+                      </div>
+                    </td>
+                    <td>
+                      <span className={b.percent >= 100 ? "down" : ""}>
+                        {b.spent.toFixed(0)} / {b.budget.amount.toFixed(0)} ({b.percent.toFixed(0)}%)
+                      </span>
+                    </td>
+                    <td>
+                      <button type="button" className="secondary" onClick={() => deleteBudget(b.budget.id).then(load)}>
+                        ×
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </article>
@@ -161,17 +189,26 @@ export default function ExtrasPage() {
 function TagForm({ onCreate }: { onCreate: (name: string) => Promise<void> }) {
   const { t } = useTranslation();
   const [name, setName] = useState("");
+  const [err, setErr] = useState("");
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    await onCreate(name.trim());
-    setName("");
+    setErr("");
+    try {
+      await onCreate(name.trim());
+      setName("");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Ошибка");
+    }
   };
   return (
-    <form onSubmit={submit} className="toolbar">
-      <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("extras.name")} />
-      <button type="submit">{t("extras.add")}</button>
-    </form>
+    <>
+      {err && <Flash kind="error">{err}</Flash>}
+      <form onSubmit={submit} className="toolbar">
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("extras.name")} />
+        <button type="submit">{t("extras.add")}</button>
+      </form>
+    </>
   );
 }
 

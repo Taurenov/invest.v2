@@ -29,14 +29,31 @@
     "add_ticker": "Ticker (MOEX)",
     "add": "Add to list",
     "price": "Price",
-    "summary": "Overview"
+    "company": "Company",
+    "sector": "Sector",
+    "summary": "Overview",
+    "search": "Search ticker or name…",
+    "watchlist": "My watchlist",
+    "updating": "Updating quotes…",
+    "updated": "Updated",
+    "count": "Showing {{count}} MOEX (TQBR) stocks"
   },
   "analytics": {
     "from": "From",
     "to": "To",
     "export": "Export CSV",
-    "by_month": "By month",
-    "by_category": "Expenses by category"
+    "by_month": "Income & expenses by month",
+    "by_category": "Expense breakdown",
+    "total_income": "Total income",
+    "total_expense": "Total expenses",
+    "net": "Net cash flow",
+    "savings_rate": "Savings rate",
+    "net_trend": "Net flow trend",
+    "balance_trend": "Running balance",
+    "expense_detail": "Expense details",
+    "income_detail": "Income details",
+    "avg_monthly": "Avg monthly expense",
+    "months": "mo."
   },
   "settings": {
     "title": "Settings",
@@ -131,10 +148,15 @@
   },
   "forecast": {
     "title": "AI Forecast",
-    "horizon": "Horizon (days)",
+    "horizon": "Horizon",
+    "days": "days",
     "run": "Run forecast",
     "loading": "Calculating…",
-    "chart_title": "History and forecast"
+    "chart_title": "History and forecast",
+    "model": "Model",
+    "confidence": "Confidence",
+    "history": "Forecast history",
+    "date": "Date"
   },
   "disclaimer": "This forecast is model-generated and is not investment advice. Make your own decisions or consult a licensed advisor."
 }

@@ -1,0 +1,42 @@
+# Полный стек для просмотра в браузере (без Tauri / без WSL на хосте).
+# Запуск: docker compose -f docker-compose.yml -f docker-compose.app.yml up -d --build
+services:
+  engine:
+    build:
+      context: ./engine
+      dockerfile: Dockerfile
+    # Порт наружу не нужен: API ходит на http://engine:50052 внутри сети compose
+    expose:
+      - "50052"
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      API_TOKEN: dev-token
+      DATABASE_URL: postgres://fin:fin@postgres:5432/finhelper?sslmode=disable
+      REDIS_URL: redis://redis:6379
+      ENGINE_HTTP_URL: http://engine:50052
+      CORS: "1"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      engine:
+        condition: service_started
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./apps/desktop
+      dockerfile: Dockerfile
+    ports:
+      - "1420:1420"
+    depends_on:
+      - api
+    restart: unless-stopped

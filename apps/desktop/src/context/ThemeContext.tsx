@@ -3,26 +3,36 @@ import { fetchSettings, updateSettings, type UserSettings } from "../api/client"
 import i18n from "../i18n";
 
 type ThemeCtx = {
-  settings: UserSettings | null;
+  settings: UserSettings;
   apply: (patch: Partial<UserSettings>) => Promise<void>;
 };
 
 const Ctx = createContext<ThemeCtx | null>(null);
 
+const DEFAULT_SETTINGS: UserSettings = {
+  locale: "ru",
+  base_currency: "RUB",
+  theme: "dark",
+  timezone: "Europe/Moscow",
+};
+
+function loadCachedSettings(): UserSettings {
+  const cached = localStorage.getItem("fin_settings_cache");
+  if (cached) {
+    try {
+      return JSON.parse(cached) as UserSettings;
+    } catch {
+      /* ignore */
+    }
+  }
+  return DEFAULT_SETTINGS;
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [settings, setSettings] = useState<UserSettings>(loadCachedSettings);
 
   useEffect(() => {
-    const cached = localStorage.getItem("fin_settings_cache");
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached) as UserSettings;
-        setSettings(parsed);
-        applyDom(parsed);
-      } catch {
-        /* ignore */
-      }
-    }
+    applyDom(settings);
     fetchSettings()
       .then((r) => {
         setSettings(r.data);
@@ -31,19 +41,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         i18n.changeLanguage(r.data.locale);
       })
       .catch(() => {
-        const fallback: UserSettings = {
-          locale: "ru",
-          base_currency: "RUB",
-          theme: "dark",
-          timezone: "Europe/Moscow",
-        };
-        setSettings(fallback);
-        applyDom(fallback);
+        setSettings(DEFAULT_SETTINGS);
+        applyDom(DEFAULT_SETTINGS);
       });
   }, []);
 
   const apply = async (patch: Partial<UserSettings>) => {
-    const next = { ...settings!, ...patch } as UserSettings;
+    const next = { ...settings, ...patch } as UserSettings;
     try {
       const r = await updateSettings(next);
       setSettings(r.data);

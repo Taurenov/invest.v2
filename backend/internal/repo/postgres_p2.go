@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/fin-helper/backend/internal/domain"
+	"github.com/fin-helper/backend/internal/market"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -276,19 +277,33 @@ func (p *Postgres) GetOrCreateSummary(ctx context.Context, symbol, exchange stri
 	if err == nil && time.Now().Before(expires) {
 		var metrics map[string]any
 		_ = json.Unmarshal(metricsJSON, &metrics)
-		return &domain.CompanySummary{Symbol: symbol, Exchange: exchange, SummaryText: text, KeyMetrics: metrics}, nil
+		var name, sector string
+		if v, ok := metrics["name"].(string); ok {
+			name = v
+		}
+		if v, ok := metrics["sector"].(string); ok {
+			sector = v
+		}
+		return &domain.CompanySummary{Symbol: symbol, Exchange: exchange, Name: name, Sector: sector, SummaryText: text, KeyMetrics: metrics}, nil
 	}
 
-	metrics := map[string]any{
-		"sector":   "Финансы",
-		"exchange": exchange,
-		"symbol":   symbol,
-	}
+	name := symbol
+	sector := "Прочее"
 	text = fmt.Sprintf(
-		"%s (%s): краткий обзор. Компания торгуется на %s. Данные обновляются из публичных источников. "+
-			"Для инвестиционных решений изучайте официальную отчётность эмитента.",
+		"%s (%s): эмитент на %s. Данные носят справочный характер — изучайте официальную отчётность.",
 		symbol, exchange, exchange,
 	)
+	if profile, ok := market.GetCompanyProfile(symbol, exchange); ok {
+		name = profile.Name
+		sector = profile.Sector
+		text = market.SummaryText(profile, "ru")
+	}
+	metrics := map[string]any{
+		"sector":   sector,
+		"exchange": exchange,
+		"symbol":   symbol,
+		"name":     name,
+	}
 	b, _ := json.Marshal(metrics)
 	expires = time.Now().Add(24 * time.Hour)
 	_, _ = p.pool.Exec(ctx, `
@@ -297,5 +312,5 @@ func (p *Postgres) GetOrCreateSummary(ctx context.Context, symbol, exchange stri
 		ON CONFLICT (instrument_id) DO UPDATE SET summary_text=$2, key_metrics=$3, expires_at=$4, fetched_at=now()
 	`, instID, text, b, expires)
 
-	return &domain.CompanySummary{Symbol: symbol, Exchange: exchange, SummaryText: text, KeyMetrics: metrics}, nil
+	return &domain.CompanySummary{Symbol: symbol, Exchange: exchange, Name: name, Sector: sector, SummaryText: text, KeyMetrics: metrics}, nil
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/fin-helper/backend/internal/engine"
 	"github.com/fin-helper/backend/internal/http/middleware"
+	"github.com/fin-helper/backend/internal/market"
 	"github.com/fin-helper/backend/internal/repo"
 	"github.com/google/uuid"
 )
@@ -50,7 +51,13 @@ func (h *ForecastHandler) Predict(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"forecast engine unavailable"}`, http.StatusServiceUnavailable)
 		return
 	}
-	narrative := buildNarrative(locale, symbol, pred.ChangePercent, horizon)
+	narrative := buildNarrative(locale, symbol, exchange, pred.ChangePercent, horizon)
+	companyName := symbol
+	sector := ""
+	if profile, ok := market.GetCompanyProfile(symbol, exchange); ok {
+		companyName = profile.Name
+		sector = profile.Sector
+	}
 	var uidPtr *uuid.UUID
 	if uid, ok := middleware.UserIDFromContext(r.Context()); ok {
 		uidPtr = &uid
@@ -71,6 +78,8 @@ func (h *ForecastHandler) Predict(w http.ResponseWriter, r *http.Request) {
 		"data": map[string]any{
 			"symbol":               symbol,
 			"exchange":             exchange,
+			"company_name":         companyName,
+			"sector":               sector,
 			"horizon_days":         horizon,
 			"predicted_value":      pred.PredictedValue,
 			"predicted_change_pct": pred.ChangePercent,
@@ -134,17 +143,38 @@ func (h *ForecastHandler) PriceHistory(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func buildNarrative(locale, symbol string, change float64, horizon int) string {
+func buildNarrative(locale, symbol, exchange string, change float64, horizon int) string {
+	name := symbol
+	sector := ""
+	if profile, ok := market.GetCompanyProfile(symbol, exchange); ok {
+		name = profile.Name
+		sector = profile.Sector
+	}
+	dirRu := "рост"
+	dirEn := "growth"
+	if change < 0 {
+		dirRu = "снижение"
+		dirEn = "decline"
+	}
 	if locale == "en" {
-		if change >= 0 {
-			return symbol + ": linear model suggests ~" + formatPct(change) + "% over " + strconv.Itoa(horizon) + " days."
+		base := name + " (" + symbol + ")"
+		if sector != "" {
+			base += ", " + sector
 		}
-		return symbol + ": linear model suggests decline ~" + formatPct(-change) + "% over " + strconv.Itoa(horizon) + " days."
+		return base + ": linear model suggests " + dirEn + " ~" + formatPct(abs(change)) + "% over " + strconv.Itoa(horizon) + " days based on recent MOEX prices."
 	}
-	if change >= 0 {
-		return symbol + ": линейная модель указывает на ~" + formatPct(change) + "% за " + strconv.Itoa(horizon) + " дн."
+	base := name + " (" + symbol + ")"
+	if sector != "" {
+		base += ", сектор «" + sector + "»"
 	}
-	return symbol + ": линейная модель указывает на снижение ~" + formatPct(-change) + "% за " + strconv.Itoa(horizon) + " дн."
+	return base + ": по линейной модели ожидается " + dirRu + " ~" + formatPct(abs(change)) + "% за " + strconv.Itoa(horizon) + " дн. на основе истории MOEX."
+}
+
+func abs(v float64) float64 {
+	if v < 0 {
+		return -v
+	}
+	return v
 }
 
 func formatPct(v float64) string {
